@@ -1,3 +1,4 @@
+// lib/screens/login_screen.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../controllers/auth_controller.dart';
@@ -16,17 +17,21 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   bool _isObscure = true;
 
-  // تم حذف البيانات الصحيحة الثابتة من هنا
+  final auth = Get.find<AuthController>();
 
   void _login() {
     if (_formKey.currentState!.validate()) {
       final email = _emailController.text.trim();
       final password = _passwordController.text;
+      auth.login(email, password);
+    }
+  }
 
-      // تم حذف منطق التحقق المحلي
-      // الآن يتم استدعاء دالة login في AuthController مباشرة
-      // وهي التي تحتوي على منطق التحقق الثابت
-      Get.find<AuthController>().login(email, password);
+  void _signUp() {
+    if (_formKey.currentState!.validate()) {
+      final email = _emailController.text.trim();
+      final password = _passwordController.text;
+      auth.signUp(email, password);
     }
   }
 
@@ -35,7 +40,7 @@ class _LoginScreenState extends State<LoginScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('تسجيل الدخول'),
+        title: const Text('تسجيل الدخول / إنشاء حساب'),
         backgroundColor: AppColors.background,
         elevation: 0,
         foregroundColor: Colors.black,
@@ -48,12 +53,10 @@ class _LoginScreenState extends State<LoginScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               const Text(
-                'مرحباً بعودتك!',
+                'مرحباً بك!',
                 style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 40),
-
-              // الإيميل
               TextFormField(
                 controller: _emailController,
                 keyboardType: TextInputType.emailAddress,
@@ -65,18 +68,12 @@ class _LoginScreenState extends State<LoginScreen> {
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
                 ),
                 validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'من فضلك أدخل الإيميل';
-                  }
-                  if (!value.contains('@')) {
-                    return 'الإيميل غير صحيح';
-                  }
+                  if (value == null || value.isEmpty) return 'من فضلك أدخل الإيميل';
+                  if (!value.contains('@')) return 'الإيميل غير صحيح';
                   return null;
                 },
               ),
               const SizedBox(height: 16),
-
-              // كلمة المرور
               TextFormField(
                 controller: _passwordController,
                 obscureText: _isObscure,
@@ -92,39 +89,38 @@ class _LoginScreenState extends State<LoginScreen> {
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
                 ),
                 validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'من فضلك أدخل كلمة المرور';
-                  }
-                  if (value.length < 8) {
-                    return 'كلمة المرور لازم تكون 8 أرقام أو أكتر';
-                  }
+                  if (value == null || value.isEmpty) return 'من فضلك أدخل كلمة المرور';
+                  if (value.length < 8) return 'كلمة المرور لازم تكون 8 أحرف أو أكتر';
                   return null;
                 },
               ),
               const SizedBox(height: 32),
-
-              // زر تسجيل الدخول
-              SizedBox(
-                width: double.infinity,
-                height: 56,
-                child: ElevatedButton(
-                  onPressed: _login,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: _login,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                      ),
+                      child: const Text('تسجيل الدخول'),
+                    ),
                   ),
-                  child: const Text(
-                    'تسجيل الدخول',
-                    style: TextStyle(fontSize: 18, color: Colors.white),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: _signUp,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                      ),
+                      child: const Text('إنشاء حساب'),
+                    ),
                   ),
-                ),
-              ),
-
-              const SizedBox(height: 20),
-              const Text(
-                'الإيميل: abdo@gmail.com\nالباسوورد: 12345678',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.grey, fontSize: 12),
+                ],
               ),
             ],
           ),
