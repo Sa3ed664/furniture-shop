@@ -1,51 +1,64 @@
 // lib/controllers/wishlist_controller.dart
 import 'package:get/get.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/product.dart';
 
 class WishlistController extends GetxController {
-  var wishlistItems = <Product>[].obs;
-  var _wishlistIds = <String>{}.obs;
+  var wishlist = <String>{}.obs; // ids المنتجات المفضلة
 
-  List<Product> get items => wishlistItems;
-  int get itemCount => wishlistItems.length;
-  bool isWishlisted(String productId) => _wishlistIds.contains(productId);
+  @override
+  void onInit() {
+    super.onInit();
+    fetchWishlist();
+  }
 
-  void toggle(Product product) {
-    if (_wishlistIds.contains(product.id)) {
-      _wishlistIds.remove(product.id);
-      wishlistItems.removeWhere((p) => p.id == product.id);
+  // جلب المفضلة من Supabase
+  Future<void> fetchWishlist() async {
+    final user = Supabase.instance.client.auth.currentUser;
+    if (user == null) return;
 
-      // ==================== (بداية التعديل) ====================
-      Get.snackbar(
-        'Removed from Wishlist',
-        '${product.name} is no longer in your wishlist.',
-        snackPosition: SnackPosition.TOP, // <-- اتغيرت لـ TOP
-        duration: const Duration(seconds: 1),
-      );
-      // ==================== (نهاية التعديل) ====================
+    final response = await Supabase.instance.client
+        .from('favorites')
+        .select('product_id')
+        .eq('user_id', user.id);
 
+    wishlist.assignAll(response.map((e) => e['product_id'] as String));
+  }
+
+  // إضافة أو إزالة من المفضلة
+  Future<void> toggle(Product product) async {
+    final user = Supabase.instance.client.auth.currentUser;
+    if (user == null) {
+      Get.snackbar('مطلوب تسجيل دخول', 'سجل دخول عشان تضيف للمفضلة');
+      Get.toNamed('/login');
+      return;
+    }
+
+    if (wishlist.contains(product.id)) {
+      // إزالة
+      await Supabase.instance.client
+          .from('favorites')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('product_id', product.id);
+
+      wishlist.remove(product.id);
+      Get.snackbar('تم الإزالة', '${product.name} تم إزالته من المفضلة');
     } else {
-      _wishlistIds.add(product.id);
-      wishlistItems.add(product);
+      // إضافة
+      await Supabase.instance.client
+          .from('favorites')
+          .insert({
+        'user_id': user.id,
+        'product_id': product.id,
+      });
 
-      // ==================== (بداية التعديل) ====================
-      Get.snackbar(
-        'Added to Wishlist',
-        '${product.name} is now in your wishlist.',
-        snackPosition: SnackPosition.TOP, // <-- اتغيرت لـ TOP
-        duration: const Duration(seconds: 1),
-      );
-      // ==================== (نهاية التعديل) ====================
+      wishlist.add(product.id);
+      Get.snackbar('تم الإضافة', '${product.name} تم إضافته للمفضلة');
     }
   }
 
-  void remove(String productId) {
-    _wishlistIds.remove(productId);
-    wishlistItems.removeWhere((p) => p.id == productId);
-  }
-
-  void clear() {
-    _wishlistIds.clear();
-    wishlistItems.clear();
+  bool isWishlisted(String productId) {
+    return wishlist.contains(productId);
   }
 }

@@ -1,91 +1,105 @@
-// lib/controllers/auth_controller.dart
 import 'package:get/get.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class AuthController extends GetxController {
-  final SupabaseClient _supabase = Supabase.instance.client;
+  final SupabaseClient _client = Supabase.instance.client;
 
-  // الحالة بتاعة تسجيل الدخول
-  var isLoggedIn = false.obs;
-
-  // بيانات المستخدم
+  // Observables عشان نتابع حالة المستخدم واللودينج
+  var isLoading = false.obs;
+  var isAuthenticated = false.obs;
   var userEmail = ''.obs;
-  var userName = ''.obs;
 
   @override
   void onInit() {
     super.onInit();
-    _loadCurrentUser();
-  }
-
-  // جلب بيانات المستخدم الحالي لو مسجل دخول
-  void _loadCurrentUser() {
-    final user = _supabase.auth.currentUser;
-    if (user != null) {
-      isLoggedIn.value = true;
-      userEmail.value = user.email ?? '';
-      userName.value = user.email?.split('@')[0] ?? '';
-    } else {
-      isLoggedIn.value = false;
-      userEmail.value = '';
-      userName.value = '';
+    // شوف لو المستخدم مسجل دخوله أصلًا (مثلًا بعد ريستارت التطبيق)
+    final currentUser = _client.auth.currentUser;
+    if (currentUser != null) {
+      isAuthenticated(true);
+      userEmail(currentUser.email ?? '');
     }
+
+    // استمع لتغييرات حالة الـ Auth (login, logout, signup...)
+    _client.auth.onAuthStateChange.listen((data) {
+      final AuthChangeEvent event = data.event;
+      final Session? session = data.session;
+
+      if (event == AuthChangeEvent.signedIn && session != null) {
+        isAuthenticated(true);
+        userEmail(session.user.email ?? '');
+      } else if (event == AuthChangeEvent.signedOut) {
+        isAuthenticated(false);
+        userEmail('');
+      }
+    });
   }
 
-  // تسجيل مستخدم جديد
-  Future<void> signUp(String email, String password) async {
+  // دالة تسجيل الدخول (Login)
+  Future<String?> login(String email, String password) async {
     try {
-      final response = await _supabase.auth.signUp(
-        email: email,
+      isLoading(true);
+
+      final AuthResponse res = await _client.auth.signInWithPassword(
+        email: email.trim(),
         password: password,
       );
 
-      if (response.user != null) {
-        isLoggedIn.value = true;
-        userEmail.value = response.user!.email ?? '';
-        userName.value = response.user!.email?.split('@')[0] ?? '';
-        Get.snackbar('Success', 'Account created successfully');
-      } else {
-        Get.snackbar('Error', 'Failed to sign up');
+      if (res.user != null) {
+        isAuthenticated(true);
+        userEmail(res.user!.email ?? '');
+        Get.snackbar('نجاح', 'تم تسجيل الدخول بنجاح');
+        Get.offAllNamed('/home'); // غير الـ route حسب اللي عندك
+        return null; // no error
       }
+    } on AuthException catch (e) {
+      return e.message;
     } catch (e) {
-      Get.snackbar('Error', e.toString());
+      return 'حدث خطأ غير متوقع';
+    } finally {
+      isLoading(false);
     }
+    return 'بيانات غير صحيحة';
   }
 
-  // تسجيل دخول
-  Future<void> login(String email, String password) async {
+  // دالة إنشاء حساب جديد (Register)
+  Future<String?> register(String email, String password) async {
     try {
-      final response = await _supabase.auth.signInWithPassword(
-        email: email,
+      isLoading(true);
+
+      final AuthResponse res = await _client.auth.signUp(
+        email: email.trim(),
         password: password,
       );
 
-      if (response.user != null) {
-        isLoggedIn.value = true;
-        userEmail.value = response.user!.email ?? '';
-        userName.value = response.user!.email?.split('@')[0] ?? '';
-        Get.snackbar('Success', 'Logged in successfully');
-        Get.offAllNamed('/home'); // ارجع للشاشة الرئيسية بعد تسجيل الدخول
-      } else {
-        Get.snackbar('Error', 'Invalid email or password');
+      if (res.user != null) {
+        // Supabase بيبعت ايميل تأكيد تلقائي (افتراضيًا مفعل)
+        Get.snackbar('نجاح', 'تم إنشاء الحساب، يرجى تأكيد الإيميل');
+        Get.offAllNamed('/login'); // أو الشاشة اللي عايز ترجع لها
+        return null;
       }
+    } on AuthException catch (e) {
+      return e.message;
     } catch (e) {
-      Get.snackbar('Error', e.toString());
+      return 'حدث خطأ غير متوقع';
+    } finally {
+      isLoading(false);
     }
+    return 'فشل في إنشاء الحساب';
   }
 
-  // تسجيل خروج
+  // دالة تسجيل الخروج (Logout)
   Future<void> logout() async {
     try {
-      await _supabase.auth.signOut();
-      isLoggedIn.value = false;
-      userEmail.value = '';
-      userName.value = '';
-      Get.snackbar('Success', 'Logged out successfully');
-      Get.offAllNamed('/login'); // ارجع لشاشة تسجيل الدخول
+      isLoading(true);
+      await _client.auth.signOut();
+      isAuthenticated(false);
+      userEmail('');
+      Get.snackbar('تم', 'تم تسجيل الخروج');
+      Get.offAllNamed('/login'); // أو splash أو الشاشة اللي عايزها
     } catch (e) {
-      Get.snackbar('Error', e.toString());
+      Get.snackbar('خطأ', 'فشل في تسجيل الخروج');
+    } finally {
+      isLoading(false);
     }
   }
 }

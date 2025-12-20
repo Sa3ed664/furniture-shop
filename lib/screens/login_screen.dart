@@ -17,21 +17,43 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   bool _isObscure = true;
 
-  final auth = Get.find<AuthController>();
+  final AuthController auth = Get.find<AuthController>();
 
-  void _login() {
+  Future<void> _login() async {
     if (_formKey.currentState!.validate()) {
       final email = _emailController.text.trim();
       final password = _passwordController.text;
-      auth.login(email, password);
+
+      String? error = await auth.login(email, password);
+
+      if (error != null && mounted) {
+        Get.snackbar(
+          'خطأ في تسجيل الدخول',
+          error,
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+        );
+      }
+      // لو نجح، الـ login function هتنقل لوحدها للـ home
     }
   }
 
-  void _signUp() {
+  Future<void> _register() async {
     if (_formKey.currentState!.validate()) {
       final email = _emailController.text.trim();
       final password = _passwordController.text;
-      auth.signUp(email, password);
+
+      String? error = await auth.register(email, password);
+
+      if (error != null && mounted) {
+        Get.snackbar(
+          'خطأ في إنشاء الحساب',
+          error,
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+        );
+      }
+      // لو نجح، هيظهر snackbar "تم إنشاء الحساب، يرجى تأكيد الإيميل"
     }
   }
 
@@ -98,27 +120,31 @@ class _LoginScreenState extends State<LoginScreen> {
               Row(
                 children: [
                   Expanded(
-                    child: ElevatedButton(
-                      onPressed: _login,
+                    child: Obx(() => ElevatedButton(
+                      onPressed: auth.isLoading.value ? null : _login,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                         padding: const EdgeInsets.symmetric(vertical: 16),
                       ),
-                      child: const Text('تسجيل الدخول'),
-                    ),
+                      child: auth.isLoading.value
+                          ? const CircularProgressIndicator(color: Colors.white)
+                          : const Text('تسجيل الدخول'),
+                    )),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
-                    child: ElevatedButton(
-                      onPressed: _signUp,
+                    child: Obx(() => ElevatedButton(
+                      onPressed: auth.isLoading.value ? null : _register,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.green,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                         padding: const EdgeInsets.symmetric(vertical: 16),
                       ),
-                      child: const Text('إنشاء حساب'),
-                    ),
+                      child: auth.isLoading.value
+                          ? const CircularProgressIndicator(color: Colors.white)
+                          : const Text('إنشاء حساب'),
+                    )),
                   ),
                 ],
               ),

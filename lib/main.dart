@@ -32,7 +32,7 @@ import 'utils/colors.dart';
 import 'models/product.dart';
 import 'models/blog_post.dart';
 
-void main() async {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await Supabase.initialize(
@@ -76,8 +76,8 @@ class FurnitureShopApp extends StatelessWidget {
             break;
 
           case AppRoutes.productDetail:
-            final product = settings.arguments as Product;
-            page = ProductDetailScreen(product: product);
+          // مهم جدًا: الشاشة بتاخد الـ arguments من Get.arguments جواها
+            page = const ProductDetailScreen();
             break;
 
           case AppRoutes.search:
@@ -133,19 +133,17 @@ class FurnitureShopApp extends StatelessWidget {
 
           default:
             page = const Scaffold(
-              body: Center(child: Text('404')),
+              body: Center(child: Text('404 - Page Not Found')),
             );
         }
 
         return PageRouteBuilder(
           transitionDuration: const Duration(milliseconds: 500),
-          reverseTransitionDuration:
-          settings.name == AppRoutes.productDetail
+          reverseTransitionDuration: settings.name == AppRoutes.productDetail
               ? Duration.zero
               : const Duration(milliseconds: 500),
           pageBuilder: (context, animation, secondaryAnimation) => page,
-          transitionsBuilder:
-              (context, animation, secondaryAnimation, child) {
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
             if (settings.name == AppRoutes.productDetail) {
               return child;
             }
@@ -159,8 +157,7 @@ class FurnitureShopApp extends StatelessWidget {
           },
         );
       },
-      builder: (context, child) =>
-          AnimationLimiter(child: child!),
+      builder: (context, child) => AnimationLimiter(child: child!),
     );
   }
 }

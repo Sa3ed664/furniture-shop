@@ -5,7 +5,7 @@ import '../controllers/cart_controller.dart';
 import '../controllers/auth_controller.dart';
 import '../utils/colors.dart';
 import 'checkout_screen.dart';
-import 'login_screen.dart'; // ← ده السطر اللي كان ناقص
+import 'login_screen.dart';
 
 class CartScreenContent extends StatelessWidget {
   const CartScreenContent({super.key});
@@ -13,7 +13,7 @@ class CartScreenContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final CartController cartController = Get.find<CartController>();
-    final auth = Get.find<AuthController>();
+    final AuthController auth = Get.find<AuthController>();
 
     return Obx(() {
       final items = cartController.items;
@@ -26,12 +26,12 @@ class CartScreenContent extends StatelessWidget {
               Icon(Icons.shopping_cart_outlined, size: 80, color: Colors.grey[400]),
               const SizedBox(height: 16),
               const Text(
-                'Your cart is empty',
+                'عربة التسوق فارغة',
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
               const Text(
-                'Start shopping and add your favorite items',
+                'ابدأ التسوق وأضف منتجاتك المفضلة',
                 style: TextStyle(color: Colors.grey),
               ),
             ],
@@ -121,21 +121,27 @@ class CartScreenContent extends StatelessWidget {
             ),
             child: Column(
               children: [
-                _buildPriceRow('Subtotal', cartController.subtotal),
-                _buildPriceRow('Discount (10%)', -cartController.discount, isDiscount: true),
+                _buildPriceRow('الإجمالي الفرعي', cartController.subtotal),
+                _buildPriceRow('الخصم (10%)', -cartController.discount, isDiscount: true),
                 const Divider(height: 20, thickness: 1),
-                _buildPriceRow('Total', cartController.total, isTotal: true),
+                _buildPriceRow('الإجمالي', cartController.total, isTotal: true),
                 const SizedBox(height: 16),
                 SizedBox(
                   width: double.infinity,
                   height: 56,
                   child: ElevatedButton(
                     onPressed: () {
-                      if (!auth.isLoggedIn.value) {
-                        Get.to(() => LoginScreen())?.then((_) {
-                          if (auth.isLoggedIn.value) Get.to(() => const CheckoutScreen());
+                      if (!auth.isAuthenticated.value) {
+                        // لو مش مسجل دخول → روح للوجين، وبعد الرجوع نشوف لو سجل دخول نروح Checkout
+                        Get.to(() => const LoginScreen())?.then((_) {
+                          if (auth.isAuthenticated.value) {
+                            Get.to(() => const CheckoutScreen());
+                          } else {
+                            Get.snackbar('مطلوب تسجيل الدخول', 'يرجى تسجيل الدخول للمتابعة إلى الدفع');
+                          }
                         });
                       } else {
+                        // لو مسجل دخول → روح مباشرة للـ Checkout
                         Get.to(() => const CheckoutScreen());
                       }
                     },
@@ -144,7 +150,7 @@ class CartScreenContent extends StatelessWidget {
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                     ),
                     child: const Text(
-                      'Proceed to Checkout',
+                      'المتابعة للدفع',
                       style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
                     ),
                   ),

@@ -1,74 +1,67 @@
+// lib/widgets/user_stats.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../utils/colors.dart';
-import '../controllers/orders_controller.dart';
-import '../controllers/cart_controller.dart';
-import '../controllers/wishlist_controller.dart';
 
 class UserStats extends StatelessWidget {
   const UserStats({super.key});
 
-  Widget _buildStatItem(String count, String label) {
-    return Column(
+  Future<int> _getCount(String table) async {
+    final user = Supabase.instance.client.auth.currentUser;
+    if (user == null) return 0;
+
+    final response = await Supabase.instance.client
+        .from(table)
+        .select()
+        .eq('user_id', user.id)
+        .count(CountOption.exact);
+
+    return response as int;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
-        Text(
-          count,
-          style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: Colors.black87,
-          ),
+        FutureBuilder<int>(
+          future: _getCount('favorites'),
+          builder: (context, snapshot) {
+            final count = snapshot.data ?? 0;
+            return _buildStat('المفضلة', count);
+          },
         ),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 14,
-            color: Colors.grey[600],
-          ),
+        FutureBuilder<int>(
+          future: _getCount('cart_items'),
+          builder: (context, snapshot) {
+            final count = snapshot.data ?? 0;
+            return _buildStat('العربة', count);
+          },
+        ),
+        FutureBuilder<int>(
+          future: _getCount('orders'),
+          builder: (context, snapshot) {
+            final count = snapshot.data ?? 0;
+            return _buildStat('الطلبات', count);
+          },
         ),
       ],
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    // جلب جميع الـ Controllers
-    final ordersController = Get.find<OrdersController>();
-    final cartController = Get.find<CartController>();
-    final wishlistController = Get.find<WishlistController>();
-
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(15),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 1,
-            blurRadius: 5,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Obx(
-            () => Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            // ربط عدد الطلبات
-            _buildStatItem(ordersController.orderCount.value.toString(), 'Orders'),
-
-            // ربط عدد عناصر العربة
-            // تم التعديل: استخدام itemCount بدلاً من cartItemCount.value
-            _buildStatItem(cartController.itemCount.toString(), 'Cart'), // **تم الإصلاح**
-
-            // ربط عدد عناصر المفضلة
-            // تم التعديل: استخدام itemCount بدلاً من wishlistCount.value
-            _buildStatItem(wishlistController.itemCount.toString(), 'Wishlist'), // **تم الإصلاح**
-          ],
+  Widget _buildStat(String label, int count) {
+    return Column(
+      children: [
+        Text(
+          '$count',
+          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.primary),
         ),
-      ),
+        Text(
+          label,
+          style: const TextStyle(fontSize: 14, color: Colors.grey),
+        ),
+      ],
     );
   }
 }
